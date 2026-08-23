@@ -19,8 +19,10 @@ public class HandlerClientAbilityInitFinishNotify extends PacketHandler {
         player.getAbilityManager().onSkillEnd(player);
 
         for (AbilityInvokeEntry entry : notif.getInvokesList()) {
-            player.getAbilityManager().onAbilityInvoke(entry);
-            player.getClientAbilityInitFinishHandler().addEntry(entry.getForwardType(), entry);
+            boolean actionAllowsEcho = player.getAbilityManager().onAbilityInvoke(entry);
+            player.getAbilityManager()
+                    .enqueueForwardedInvoke(
+                            player.getClientAbilityInitFinishHandler(), entry, actionAllowsEcho);
         }
 
         if (notif.getInvokesList().size() > 0) {

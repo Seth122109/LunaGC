@@ -12,7 +12,9 @@ import emu.grasscutter.game.avatar.Avatar;
 
 import emu.grasscutter.net.proto.AbilityMetaSpecialEnergyOuterClass;
 import emu.grasscutter.net.proto.DetailAbilityInfoOuterClass.DetailAbilityInfo;
+import emu.grasscutter.net.proto.ForwardTypeOuterClass.ForwardType;
 import emu.grasscutter.game.entity.EntityAvatar;
+import emu.grasscutter.game.entity.EntityBaseGadget;
 import emu.grasscutter.game.entity.EntityClientGadget;
 import emu.grasscutter.game.entity.GameEntity;
 import emu.grasscutter.data.excels.ProudSkillData;
@@ -240,7 +242,7 @@ public final class AbilityManager extends BasePlayerManager {
             });
     }
 
-    public void onAbilityInvoke(AbilityInvokeEntry invoke) throws Exception {
+    public boolean onAbilityInvoke(AbilityInvokeEntry invoke) throws Exception {
         Grasscutter.getLogger()
             .trace(
                 "Ability invoke: "
@@ -283,8 +285,7 @@ public final class AbilityManager extends BasePlayerManager {
                 .trace("Target: " + this.player.getScene().getEntityById(invoke.getHead().getTargetId()));
         }
         if (invoke.getHead().getLocalId() != 0) {
-            this.handleServerInvoke(invoke);
-            return;
+            return this.handleServerInvoke(invoke);
         }
 
         switch (invoke.getArgumentType()) {
@@ -315,6 +316,25 @@ public final class AbilityManager extends BasePlayerManager {
                         .trace("Missing invoke handler for ability {}.", invoke.getArgumentType().name());
                 }
             }
+        }
+        return true;
+    }
+
+    public void enqueueForwardedInvoke(
+            InvokeHandler<AbilityInvokeEntry> handler,
+            AbilityInvokeEntry invoke,
+            boolean actionAllowsEcho) {
+        var entity = this.player.getScene().getEntityById(invoke.getEntityId());
+        int invokingGadgetId =
+                entity instanceof EntityBaseGadget gadget ? gadget.getGadgetId() : 0;
+        boolean echoToOwner =
+                actionAllowsEcho
+                        && FurinaGadgetPolicy.shouldEchoToOwner(invokingGadgetId, 0);
+
+        if (echoToOwner) {
+            handler.addEntry(invoke.getForwardType(), invoke);
+        } else if (invoke.getForwardType() == ForwardType.ForwardType_FORWARD_TO_ALL) {
+            handler.addEntry(ForwardType.ForwardType_FORWARD_TO_ALL_EXCEPT_CUR, invoke);
         }
     }
 
@@ -355,7 +375,7 @@ public final class AbilityManager extends BasePlayerManager {
         target.addSpecialEnergy(specialEnergyAdd);
     }
 
-    public void handleServerInvoke(AbilityInvokeEntry invoke) {
+    public boolean handleServerInvoke(AbilityInvokeEntry invoke) {
         var head = invoke.getHead();
 
         var entity = this.player.getScene().getEntityById(invoke.getEntityId());
@@ -363,7 +383,7 @@ public final class AbilityManager extends BasePlayerManager {
             Grasscutter.getLogger().trace(
                 "handleServerInvoke: entity not found: entityId={} localId={} type={}",
                 invoke.getEntityId(), head.getLocalId(), invoke.getArgumentType());
-            return;
+            return true;
         }
 
         var target = this.player.getScene().getEntityById(head.getTargetId());
@@ -387,7 +407,7 @@ public final class AbilityManager extends BasePlayerManager {
                 "[InvokeMiss] ability not found: entity={} abilId={} modId={} listSize={}",
                 entity.getId(), head.getInstancedAbilityId(), head.getInstancedModifierId(),
                 entity.getInstancedAbilities().size());
-            return;
+            return true;
         }
         if (ability != null && target != null) {
 
@@ -405,8 +425,12 @@ public final class AbilityManager extends BasePlayerManager {
 
         var action = ability.getData().localIdToAction.get(head.getLocalId());
         if (action != null) {
+            if (action.type == AbilityModifierAction.Type.CreateGadget
+                    && FurinaGadgetPolicy.isManagedGadget(action.gadgetID)) {
+                return false;
+            }
             this.executeAction(ability, action, invoke.getAbilityData(), target);
-            return;
+            return true;
         } else {
             var mixin = ability.getData().localIdToMixin.get(head.getLocalId());
 
@@ -414,7 +438,7 @@ public final class AbilityManager extends BasePlayerManager {
                 Grasscutter.getLogger().trace("Executing mixin: {}", mixin);
                 executeMixin(ability, mixin, invoke.getAbilityData());
 
-                return;
+                return true;
             }
         }
 
@@ -424,6 +448,7 @@ public final class AbilityManager extends BasePlayerManager {
             ability.getData().abilityName,
             ability.getData().localIdToAction.keySet(),
             ability.getData().localIdToMixin.keySet());
+        return true;
     }
 
     public void onSkillStart(Player player, int skillId, int casterId) {
