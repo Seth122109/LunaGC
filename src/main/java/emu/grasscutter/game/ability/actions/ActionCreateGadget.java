@@ -4,6 +4,7 @@ import com.google.protobuf.*;
 import emu.grasscutter.Grasscutter;
 import emu.grasscutter.data.binout.AbilityModifier.AbilityModifierAction;
 import emu.grasscutter.game.ability.Ability;
+import emu.grasscutter.game.ability.FurinaGadgetPolicy;
 import emu.grasscutter.game.entity.*;
 import emu.grasscutter.game.props.CampTargetType;
 import emu.grasscutter.game.world.Position;
@@ -15,6 +16,10 @@ public class ActionCreateGadget extends AbilityActionHandler {
     @Override
     public boolean execute(
             Ability ability, AbilityModifierAction action, ByteString abilityData, GameEntity target) {
+        if (!FurinaGadgetPolicy.shouldCreateOnServer(action.gadgetID)) {
+            return true;
+        }
+
         var entity = ability.getOwner();
         if (entity instanceof EntityClientGadget) return true;
         AbilityActionCreateGadget createGadget;

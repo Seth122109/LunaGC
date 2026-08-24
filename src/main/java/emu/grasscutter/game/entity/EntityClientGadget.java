@@ -7,6 +7,7 @@ import emu.grasscutter.data.GameData;
 import emu.grasscutter.data.binout.config.ConfigEntityGadget;
 import emu.grasscutter.data.binout.config.fields.ConfigAbilityData;
 import emu.grasscutter.data.excels.GadgetData;
+import emu.grasscutter.game.ability.FurinaGadgetPolicy;
 import emu.grasscutter.game.player.Player;
 import emu.grasscutter.game.props.PlayerProperty;
 import emu.grasscutter.game.world.*;
@@ -58,6 +59,7 @@ public class EntityClientGadget extends EntityBaseGadget {
     @Getter private int originalOwnerEntityId;
     @Getter private final GadgetData gadgetData;
     @Getter private ConfigEntityGadget configGadget;
+    @Getter private long furinaExpiryTimeMillis = Long.MAX_VALUE;
 
     public EntityClientGadget(Scene scene, Player player, EvtCreateGadgetNotify notify) {
         super(
@@ -83,6 +85,10 @@ public class EntityClientGadget extends EntityBaseGadget {
         }
 
         GameEntity ownerEntity = scene.getEntityById(this.ownerEntityId);
+        long ownerExpiryTimeMillis =
+                ownerEntity instanceof EntityClientGadget ownerGadget
+                        ? ownerGadget.getFurinaExpiryTimeMillis()
+                        : Long.MAX_VALUE;
         String ownerTypeBeforeResolve = ownerEntity != null ? ownerEntity.getClass().getSimpleName() : "null";
         ownerEntity = findOwnerEntity(ownerEntity);
         if (ownerEntity == null) {
@@ -93,6 +99,10 @@ public class EntityClientGadget extends EntityBaseGadget {
         } else {
             this.originalOwnerEntityId = this.ownerEntityId;
         }
+
+        this.furinaExpiryTimeMillis =
+                FurinaGadgetPolicy.expiryTimeMillis(
+                        this.gadgetId, System.currentTimeMillis(), ownerExpiryTimeMillis);
 
         this.initAbilities();
     }
@@ -128,6 +138,15 @@ public class EntityClientGadget extends EntityBaseGadget {
     @Override
     public void onDeath(int killerId) {
         super.onDeath(killerId);
+    }
+
+    @Override
+    public void onTick(int sceneTime) {
+        super.onTick(sceneTime);
+        if (FurinaGadgetPolicy.isExpired(
+                System.currentTimeMillis(), this.furinaExpiryTimeMillis)) {
+            this.getScene().onPlayerDestroyGadget(this.getId());
+        }
     }
 
     @Override
