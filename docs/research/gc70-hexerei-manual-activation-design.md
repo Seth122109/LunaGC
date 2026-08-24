@@ -55,6 +55,7 @@ Hex team count is centralized in `HexereiManager` and used by `PacketPlayerEnter
 
 `hexerei` is `ONLINE` with normal self/`@uid` targeting and separate targeted permission. Supported forms are:
 
+- `team`
 - `status [all|<avatarId>]`
 - `activate <avatarId>`
 - `reset <avatarId|all>`
@@ -62,6 +63,8 @@ Hex team count is centralized in `HexereiManager` and used by `PacketPlayerEnter
 There is no activate-all. Activation requires the target to own the exact eligible mapped avatar. Reset is idempotent and removes only records in this namespace. Mutation saves `Player` only and never invokes `QuestManager` or `GameQuest`.
 
 Status is deterministic and always says `authoritative_completion=UNAVAILABLE_RESOURCE`. It reports mapping, ownership, eligibility/tag/depot checks, manual record validity, effective activation, raw/effective proud presence, provenance/audit, and one consistency value: `NOT_OWNED`, `ELIGIBILITY_MISMATCH`, `DEPOT_MISMATCH`, `INVALID_RECORD`, `INACTIVE_RAW_FILTERED`, `INACTIVE_NO_RAW`, `ACTIVE_CONSISTENT`, or `ACTIVE_MISSING_RAW`. Manual active is never labeled quest completed.
+
+`team` is read-only. It reports the ordered active-party avatar IDs; per-member mapping, eligibility, effective activation, expected/actual depot, and consistency; the calculated effective team count; the exact float `SGV_HexenzirkelLevel` value the existing send paths will emit; and the current server-side team-entity cache value used by `ByTargetGlobalValue`. When Venti is present it also reports whether `Avatar_Venti_HexenzirkelSkill` exists in the effective extra-embryo and instanced-ability views plus the two runtime values required by the verified normal-attack resource branch. It does not send SGVs or save/mutate quests, talents, avatars, records, or player data.
 
 ## Tests, verification boundary, and rollback
 
@@ -75,7 +78,9 @@ Focused `HexereiManagerTest` coverage:
 - repeat activation preserves the first audit record;
 - targeted reset preserves other records;
 - reset-all clears only this manager's records;
-- all listed consistency states.
+- all listed consistency states;
+- read-only team summarization counts only effectively active members, preserves party order, and keeps the calculated float send value distinct from the server-cached predicate value;
+- the temporary Venti diagnostic filter accepts only the six `Avatar_Venti_ShootArrow_0*` normal-attack abilities.
 
 The permitted test command is `gradlew.bat test --tests emu.grasscutter.game.player.HexereiManagerTest -x generateProto -x processResources --no-daemon`. Static Gradle inspection confirms `test` does not depend on `jar`, `build`, publishing, `run`, server/client startup, runtime resources, or root-JAR output when those two generation/resource tasks are excluded. It may update ordinary Gradle compilation/test outputs under ignored `build/`; it must not touch `resources/`, MongoDB/player data, Cultivation, the game install, or the root JAR.
 
@@ -84,3 +89,5 @@ No runtime verification, deployment, JAR/package build, server/client start, pla
 The exact runtime gate, risk ranking, C0-C6 protocol, per-character observables, and Durin-first sequence are maintained in `docs/research/gc70-hexerei-character-verification-matrix.md`. Runtime execution remains user-controlled. Source verification and candidate preparation do not convert manual activation into authoritative completion or establish any character mechanic that the matrix marks unresolved.
 
 Source rollback is reviewable reversion of the new manager/command/test and the named integration hunks, plus removal of the `Player` namespace if no persisted documents have been deployed. After any later deployment, data rollback is `hexerei reset all @<uid>` per affected player before reverting code; no quest or avatar-field restoration should be necessary.
+
+The diagnostic candidate uses the unique tag `[HEX-V70-VENTI-DIAG-4F2C]` only at the team-SGV sync, Venti runtime-value update, verified primary normal-attack predicate, and selected base/Hex bullet branch. It is temporary diagnostic instrumentation, not release behavior. Remove or explicitly gate every occurrence after the cause is proven and before producing a release candidate.

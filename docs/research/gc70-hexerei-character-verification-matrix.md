@@ -32,6 +32,19 @@ Run each row on the same user-controlled test account and record command output,
 | Reset all | `hexerei reset all` | Hexerei namespace empty | Count `0` | No quest/avatar field restoration is needed because none was changed |
 | Invalid record | Only if a controlled fixture exists; do not corrupt live data | `INVALID_RECORD`; fail closed until reset | Excluded | Activation refuses to overwrite the invalid record |
 
+## Venti red/green diagnostic loop
+
+Use only the uniquely named diagnostic candidate. Do not run `/sgv`; it is write-only and would force the tested value.
+
+1. Put effectively active Durin `10000123` and Venti `10000022` in the same active party.
+2. Run `hexerei team`. Required count-side evidence is both members `mapped=true`, `eligible=true`, `effective_active=true`, `calculated_team_count=2`, and `sgv_send_value=2.0`. Record `server_cached_present/value` separately; it is the server predicate cache, not a command write.
+3. Record `hexerei venti_boundary`: `hex_extra_embryo_present`, `hex_ability_instanced`, `_ABILITY_Venti_Is_Hexenzirkel`, and `_ABILITY_Venti_ElementalBurst_Enchanted`.
+4. Cast Venti's burst. Run `hexerei team` again immediately, then perform one normal attack.
+5. Capture only `[HEX-V70-VENTI-DIAG-4F2C]` lines. A complete attempt contains the burst/runtime-value transition if received, the primary normal-attack predicate values in evaluation order until the first false result, and `normal_attack_branch` selecting `HEX_BULLET` or `BASE_BULLET`.
+6. Repeat once without changing party or activation. The same boundary must produce the same classification before any fix is considered.
+
+This loop is red-capable for the reported symptom but remains user-controlled because server/client/game process control is outside source-task authority. Do not repair a seam until its captured values falsify the alternatives. Remove or explicitly gate the diagnostic tag before a release candidate.
+
 ## Talent and C0-C6 protocol
 
 For every character, capture `skillLevelMap`, `talentIdList`, raw/effective proud IDs, and status before activation. Repeat the inactive/active/reset comparison at C0, C1, C2, C3, C4, C5, and C6. Each constellation cell passes only if:

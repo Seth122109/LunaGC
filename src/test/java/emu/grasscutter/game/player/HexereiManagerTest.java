@@ -7,7 +7,9 @@ import emu.grasscutter.game.player.HexereiManager.ActivationRecord;
 import emu.grasscutter.game.player.HexereiManager.ActivationResult;
 import emu.grasscutter.game.player.HexereiManager.Consistency;
 import emu.grasscutter.game.player.HexereiManager.RosterEntry;
+import emu.grasscutter.game.player.HexereiManager.TeamMemberSnapshot;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -251,6 +253,41 @@ class HexereiManagerTest {
         assertTrue(manager.getActivationRecords().isEmpty());
     }
 
+    @Test
+    void teamSnapshotCountsOnlyEffectivelyActiveMembersAndPreservesSendValue() {
+        var members = List.of(
+                teamMember(DURIN, true, "ACTIVE_CONSISTENT"),
+                teamMember(VENTI, true, "ACTIVE_CONSISTENT"),
+                teamMember(
+                        HexereiManager.getRosterEntry(10000029),
+                        false,
+                        "INACTIVE_RAW_FILTERED"),
+                new TeamMemberSnapshot(
+                        10000046,
+                        "UNMAPPED",
+                        false,
+                        false,
+                        0,
+                        4601,
+                        false,
+                        "NOT_MAPPED"));
+
+        var snapshot = HexereiManager.summarizeTeamMembers(members, 0f);
+
+        assertEquals(members, snapshot.members());
+        assertEquals(2, snapshot.calculatedTeamCount());
+        assertEquals(2f, snapshot.sgvValueToSend());
+        assertEquals(0f, snapshot.serverCachedSgvValue());
+    }
+
+    @Test
+    void ventiDiagnosticFilterIsLimitedToExactNormalAttackBoundary() {
+        assertTrue(HexereiDiagnostics.isVentiNormalAttackName("Avatar_Venti_ShootArrow_01"));
+        assertTrue(HexereiDiagnostics.isVentiNormalAttackName("Avatar_Venti_ShootArrow_06"));
+        assertFalse(HexereiDiagnostics.isVentiNormalAttackName("Avatar_Venti_Hurricane"));
+        assertFalse(HexereiDiagnostics.isVentiNormalAttackName("Avatar_Klee_ShootArrow_01"));
+    }
+
     private static HexereiManager activatedFor(RosterEntry... entries) {
         HexereiManager manager = new HexereiManager();
         for (RosterEntry entry : entries) {
@@ -260,6 +297,19 @@ class HexereiManagerTest {
                             entry.avatarId(), entry.skillDepotId(), true, true, 1, 2L));
         }
         return manager;
+    }
+
+    private static TeamMemberSnapshot teamMember(
+            RosterEntry entry, boolean effectiveActivation, String consistency) {
+        return new TeamMemberSnapshot(
+                entry.avatarId(),
+                entry.name(),
+                true,
+                true,
+                entry.skillDepotId(),
+                entry.skillDepotId(),
+                effectiveActivation,
+                consistency);
     }
 
     private static <T, U> long uniqueCount(

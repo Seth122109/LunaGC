@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -103,8 +104,57 @@ public final class HexereiManager extends BasePlayerDataManager {
     }
 
     public int countEffectiveActivations(Stream<Avatar> avatars) {
-        if (avatars == null) return 0;
-        return (int) avatars.filter(this::isEffectivelyActive).count();
+        return this.inspectTeam(avatars, null).calculatedTeamCount();
+    }
+
+    public TeamSnapshot inspectTeam(Stream<Avatar> avatars, Float serverCachedSgvValue) {
+        List<TeamMemberSnapshot> members = avatars == null
+                ? Collections.emptyList()
+                : avatars.filter(avatar -> avatar != null)
+                        .map(this::inspectTeamMember)
+                        .toList();
+        return summarizeTeamMembers(members, serverCachedSgvValue);
+    }
+
+    private TeamMemberSnapshot inspectTeamMember(Avatar avatar) {
+        RosterEntry entry = ROSTER.get(avatar.getAvatarId());
+        if (entry == null) {
+            return new TeamMemberSnapshot(
+                    avatar.getAvatarId(),
+                    "UNMAPPED",
+                    false,
+                    false,
+                    0,
+                    avatar.getSkillDepotId(),
+                    false,
+                    "NOT_MAPPED");
+        }
+
+        StatusSnapshot status = this.inspect(avatar);
+        return new TeamMemberSnapshot(
+                entry.avatarId(),
+                entry.name(),
+                true,
+                status.staticallyEligible(),
+                entry.skillDepotId(),
+                status.actualSkillDepotId(),
+                status.effectiveActivation(),
+                status.consistency().name());
+    }
+
+    static TeamSnapshot summarizeTeamMembers(
+            List<TeamMemberSnapshot> members, Float serverCachedSgvValue) {
+        List<TeamMemberSnapshot> safeMembers = members == null
+                ? Collections.emptyList()
+                : List.copyOf(members);
+        int calculatedTeamCount = (int) safeMembers.stream()
+                .filter(TeamMemberSnapshot::effectiveActivation)
+                .count();
+        return new TeamSnapshot(
+                safeMembers,
+                calculatedTeamCount,
+                (float) calculatedTeamCount,
+                serverCachedSgvValue);
     }
 
     public ActivationResult activateOwnedAvatar(Avatar avatar, int actorUid, long activatedAtEpochSecond) {
@@ -343,6 +393,22 @@ public final class HexereiManager extends BasePlayerDataManager {
             boolean rawProudPresent,
             boolean effectiveProudPresent,
             Consistency consistency) {}
+
+    public record TeamMemberSnapshot(
+            int avatarId,
+            String name,
+            boolean mapped,
+            boolean staticallyEligible,
+            int expectedSkillDepotId,
+            int actualSkillDepotId,
+            boolean effectiveActivation,
+            String consistency) {}
+
+    public record TeamSnapshot(
+            List<TeamMemberSnapshot> members,
+            int calculatedTeamCount,
+            float sgvValueToSend,
+            Float serverCachedSgvValue) {}
 
     @Entity(useDiscriminator = false)
     public static final class ActivationRecord {
