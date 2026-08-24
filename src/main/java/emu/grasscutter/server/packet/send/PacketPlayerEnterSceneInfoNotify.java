@@ -27,14 +27,7 @@ import java.util.stream.Collectors;
 
 public class PacketPlayerEnterSceneInfoNotify extends BasePacket {
 
-    private static volatile Set<Integer> HEX_IDS_CACHE;
     private static volatile Set<Integer> MOON_IDS_CACHE;
-
-    public static Set<Integer> getHexenzirkelIds() {
-        Set<Integer> s = HEX_IDS_CACHE;
-        if (s == null) HEX_IDS_CACHE = s = buildTaggedSet("AVATAR_TAG_HEXENZIRKEL");
-        return s;
-    }
 
     public static Set<Integer> getMoonphaseIds() {
         Set<Integer> s = MOON_IDS_CACHE;
@@ -60,9 +53,8 @@ public class PacketPlayerEnterSceneInfoNotify extends BasePacket {
                 .build();
                 player.setPhlogistonValue(100);
 
-        long hexCount = player.getTeamManager().getActiveTeam().stream()
-                .filter(e -> getHexenzirkelIds().contains(e.getAvatar().getAvatarId()))
-                .count();
+        int hexCount = player.getHexereiManager().countEffectiveActivations(
+                player.getTeamManager().getActiveTeam().stream().map(EntityAvatar::getAvatar));
 
         AbilityScalarValueEntry hexLevel = AbilityScalarValueEntry.newBuilder()
                 .setKey(AbilityString.newBuilder()
@@ -154,7 +146,7 @@ public class PacketPlayerEnterSceneInfoNotify extends BasePacket {
                     .build());
         }
 
-        for (int proudSkillId : avatar.getProudSkillList()) {
+        for (int proudSkillId : avatar.getEffectiveProudSkillList()) {
             applyProudSkillVars(proudSkillId, info);
         }
 

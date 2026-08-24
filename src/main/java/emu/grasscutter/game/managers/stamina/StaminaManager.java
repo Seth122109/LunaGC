@@ -632,7 +632,7 @@ public class StaminaManager extends BasePlayerManager {
         // All known talents reductions are not stackable
         float reduction = 1;
         for (EntityAvatar entity : cachedSession.getPlayer().getTeamManager().getActiveTeam()) {
-            for (int skillId : entity.getAvatar().getProudSkillList()) {
+            for (int skillId : entity.getAvatar().getEffectiveProudSkillList()) {
                 if (talentReductionMap.containsKey(skillId)) {
                     float potentialLowerReduction = talentReductionMap.get(skillId);
                     if (potentialLowerReduction < reduction) {
@@ -687,7 +687,7 @@ public class StaminaManager extends BasePlayerManager {
                 consumption.amount = 0;
                 break;
             case 10160:
-                if (player.getTeamManager().getCurrentAvatarEntity().getAvatar().getProudSkillList().contains(162101)) {
+                if (player.getTeamManager().getCurrentAvatarEntity().getAvatar().getEffectiveProudSkillList().contains(162101)) {
                     consumption.amount /= 2;
                 }
                 break;

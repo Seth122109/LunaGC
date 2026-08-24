@@ -271,7 +271,7 @@ public class EntityAvatar extends GameEntity {
                         .setCoreProudSkillLevel(avatar.getCoreProudSkillLevel())
                         .putAllSkillLevelMap(avatar.getSkillLevelMap())
                         .setSkillDepotId(avatar.getSkillDepotId())
-                        .addAllInherentProudSkillList(avatar.getProudSkillList())
+                        .addAllInherentProudSkillList(avatar.getEffectiveProudSkillList())
                         .putAllProudSkillExtraLevelMap(avatar.getProudSkillBonusMap())
                         .addAllTeamResonanceList(player.getTeamManager().getTeamResonances())
                         .setWearingFlycloakId(avatar.getFlyCloak())

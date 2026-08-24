@@ -18,6 +18,7 @@ import emu.grasscutter.data.excels.weapon.*;
 import emu.grasscutter.database.DatabaseHelper;
 import emu.grasscutter.game.entity.*;
 import emu.grasscutter.game.inventory.*;
+import emu.grasscutter.game.player.HexereiManager;
 import emu.grasscutter.game.player.Player;
 import emu.grasscutter.game.props.*;
 import emu.grasscutter.net.proto.AvatarFetterInfoOuterClass.AvatarFetterInfo;
@@ -177,6 +178,15 @@ public class Avatar {
 
     public Player getPlayer() {
         return this.owner;
+    }
+
+    /** Returns runtime/client proud skills without mutating the persisted raw materialization. */
+    public Set<Integer> getEffectiveProudSkillList() {
+        boolean effectiveActivation = this.owner != null
+                && this.owner.getHexereiManager() != null
+                && this.owner.getHexereiManager().isEffectivelyActive(this);
+        return HexereiManager.effectiveProudSkillView(
+                this.getAvatarId(), this.getProudSkillList(), effectiveActivation);
     }
 
     public ObjectId getObjectId() {
@@ -721,7 +731,7 @@ public class Avatar {
         }
 
         // Proud skills
-        for (int proudSkillId : this.getProudSkillList()) {
+        for (int proudSkillId : this.getEffectiveProudSkillList()) {
             ProudSkillData proudSkillData = GameData.getProudSkillDataMap().get(proudSkillId);
             if (proudSkillData == null) {
                 continue;
@@ -1089,7 +1099,7 @@ public class Avatar {
                         .setSkillDepotId(this.getSkillDepotId())
                         .setCoreProudSkillLevel(this.getCoreProudSkillLevel())
                         .putAllSkillLevelMap(this.getSkillLevelMap())
-                        .addAllInherentProudSkillList(this.getProudSkillList())
+                        .addAllInherentProudSkillList(this.getEffectiveProudSkillList())
                         .putAllProudSkillExtraLevelMap(this.getProudSkillBonusMap())
                         .setAvatarType(this.getAvatarType())
                         .setBornTime(this.getBornTime())
@@ -1139,7 +1149,7 @@ public class Avatar {
                         .putAllFightPropMap(this.getFightProperties())
                         .setSkillDepotId(this.getSkillDepotId())
                         .setCoreProudSkillLevel(this.getCoreProudSkillLevel())
-                        .addAllInherentProudSkillList(this.getProudSkillList())
+                        .addAllInherentProudSkillList(this.getEffectiveProudSkillList())
                         .putAllSkillLevelMap(this.getSkillLevelMap())
                         .putAllProudSkillExtraLevelMap(this.getProudSkillBonusMap())
                         .setFetterInfo(avatarFetter)
