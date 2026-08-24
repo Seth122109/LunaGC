@@ -1,7 +1,7 @@
 # GC 7.0 Hexerei character verification matrix
 
-Status date: 2026-08-24  
-Scope: PR #1 runtime-validation plan after rebasing onto `7.0.0` commit `4b43902`  
+Status date: 2026-08-24
+Scope: PR #1 runtime-validation plan after rebasing onto `7.0.0` commit `4b43902`
 Evidence boundary: source/resource-derived expectations plus user-controlled UAT; no authoritative quest completion is available
 
 ## Pass gate
