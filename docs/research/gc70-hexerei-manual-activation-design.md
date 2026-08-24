@@ -81,4 +81,6 @@ The permitted test command is `gradlew.bat test --tests emu.grasscutter.game.pla
 
 No runtime verification, deployment, JAR/package build, server/client start, player-data mutation, resource installation, or CodeGraph refresh is authorized. Later UAT remains gated; the minimum eventual UAT is login/reconnect persistence, inactive/active proud and ability behavior for one mapped avatar, two-active-member SGV behavior, idempotent activation, reset restoration, and unaffected non-Hex/other quest proud skills.
 
+The exact runtime gate, risk ranking, C0-C6 protocol, per-character observables, and Durin-first sequence are maintained in `docs/research/gc70-hexerei-character-verification-matrix.md`. Runtime execution remains user-controlled. Source verification and candidate preparation do not convert manual activation into authoritative completion or establish any character mechanic that the matrix marks unresolved.
+
 Source rollback is reviewable reversion of the new manager/command/test and the named integration hunks, plus removal of the `Player` namespace if no persisted documents have been deployed. After any later deployment, data rollback is `hexerei reset all @<uid>` per affected player before reverting code; no quest or avatar-field restoration should be necessary.
