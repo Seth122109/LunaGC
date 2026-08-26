@@ -913,16 +913,7 @@ public final class AbilityManager extends BasePlayerManager {
             }
         }
 
-        Float previousValue = entity.getGlobalAbilityValues().put(key, value);
-        if (HexereiDiagnostics.shouldTraceVentiRuntimeValue(entity, key)) {
-            Grasscutter.getLogger().info(
-                "{} event=venti_runtime_value entity_id={} key={} previous={} current={}",
-                HexereiDiagnostics.TAG,
-                entity.getId(),
-                key,
-                previousValue == null ? "NONE" : previousValue,
-                value);
-        }
+        entity.getGlobalAbilityValues().put(key, value);
         entity.onAbilityValueUpdate();
     }
 

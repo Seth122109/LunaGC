@@ -18,6 +18,7 @@ public final class HexereiManager extends BasePlayerDataManager {
     public static final int SCHEMA_VERSION = 1;
     public static final int CONSOLE_ACTOR_UID = 0;
     public static final String AUTHORITATIVE_COMPLETION = "UNAVAILABLE_RESOURCE";
+    public static final String TEAM_SGV = "SGV_HexenzirkelLevel";
     private static final String HEXEREI_TAG = "AVATAR_TAG_HEXENZIRKEL";
 
     private static final Map<Integer, RosterEntry> ROSTER = buildRoster();
@@ -35,6 +36,10 @@ public final class HexereiManager extends BasePlayerDataManager {
 
     HexereiManager(Map<Integer, ActivationRecord> activationRecords) {
         this.activationRecords = new HashMap<>(activationRecords);
+    }
+
+    public static void cacheTeamSgv(Map<String, Float> values, int effectiveCount) {
+        values.put(TEAM_SGV, (float) effectiveCount);
     }
 
     private static Map<Integer, RosterEntry> buildRoster() {

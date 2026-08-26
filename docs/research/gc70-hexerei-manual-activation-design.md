@@ -80,14 +80,12 @@ Focused `HexereiManagerTest` coverage:
 - reset-all clears only this manager's records;
 - all listed consistency states;
 - read-only team summarization counts only effectively active members, preserves party order, and keeps the calculated float send value distinct from the server-cached predicate value;
-- the temporary Venti diagnostic filter accepts only the six `Avatar_Venti_ShootArrow_0*` normal-attack abilities.
+- the exact effective team count is cached under `SGV_HexenzirkelLevel` for server predicates.
 
-The permitted test command is `gradlew.bat test --tests emu.grasscutter.game.player.HexereiManagerTest -x generateProto -x processResources --no-daemon`. Static Gradle inspection confirms `test` does not depend on `jar`, `build`, publishing, `run`, server/client startup, runtime resources, or root-JAR output when those two generation/resource tasks are excluded. It may update ordinary Gradle compilation/test outputs under ignored `build/`; it must not touch `resources/`, MongoDB/player data, Cultivation, the game install, or the root JAR.
+`ResourceLoaderOpenConfigTest` separately verifies that a missing optional open-config directory does not discard entries already parsed from avatar talents. The permitted focused command selects only `HexereiManagerTest` and `ResourceLoaderOpenConfigTest`, excludes `generateProto` and `processResources`, and uses `--no-daemon`. Static Gradle inspection confirms this test path does not depend on `jar`, `build`, publishing, `run`, server/client startup, runtime resources, or root-JAR output. It may update ordinary Gradle compilation/test outputs under ignored `build/`; it must not touch `resources/`, MongoDB/player data, Cultivation, the game install, or the root JAR.
 
 No runtime verification, deployment, JAR/package build, server/client start, player-data mutation, resource installation, or CodeGraph refresh is authorized. Later UAT remains gated; the minimum eventual UAT is login/reconnect persistence, inactive/active proud and ability behavior for one mapped avatar, two-active-member SGV behavior, idempotent activation, reset restoration, and unaffected non-Hex/other quest proud skills.
 
 The exact runtime gate, risk ranking, C0-C6 protocol, per-character observables, and Durin-first sequence are maintained in `docs/research/gc70-hexerei-character-verification-matrix.md`. Runtime execution remains user-controlled. Source verification and candidate preparation do not convert manual activation into authoritative completion or establish any character mechanic that the matrix marks unresolved.
 
 Source rollback is reviewable reversion of the new manager/command/test and the named integration hunks, plus removal of the `Player` namespace if no persisted documents have been deployed. After any later deployment, data rollback is `hexerei reset all @<uid>` per affected player before reverting code; no quest or avatar-field restoration should be necessary.
-
-The diagnostic candidate uses the unique tag `[HEX-V70-VENTI-DIAG-4F2C]` only at the team-SGV sync, Venti runtime-value update, verified primary normal-attack predicate, and selected base/Hex bullet branch. It is temporary diagnostic instrumentation, not release behavior. Remove or explicitly gate every occurrence after the cause is proven and before producing a release candidate.

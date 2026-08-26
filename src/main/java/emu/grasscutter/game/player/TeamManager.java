@@ -365,24 +365,11 @@ public final class TeamManager extends BasePlayerDataManager {
 
     public void sendHexereiTeamUpdate() {
         int hexereiCount = this.getEffectiveHexereiCount();
-        if (HexereiDiagnostics.hasEffectivelyActiveVenti(this.getPlayer())) {
-            var teamEntity = this.getEntity();
-            Float serverCachedValue = teamEntity == null
-                    ? null
-                    : teamEntity.getGlobalAbilityValues().get(HexereiDiagnostics.TEAM_SGV);
-            Grasscutter.getLogger().info(
-                    "{} event=team_sgv_sync phase=team_update uid={} active_avatar_ids={} calculated_count={} send_value={} team_entity_id={} server_cached_before={}",
-                    HexereiDiagnostics.TAG,
-                    this.getPlayer().getUid(),
-                    HexereiDiagnostics.activeAvatarIds(this.getPlayer()),
-                    hexereiCount,
-                    (float) hexereiCount,
-                    teamEntity == null ? "NONE" : teamEntity.getId(),
-                    serverCachedValue == null ? "NONE" : serverCachedValue);
-        }
         if (this.getEntity() != null) {
+            HexereiManager.cacheTeamSgv(
+                    this.getEntity().getGlobalAbilityValues(), hexereiCount);
             this.getPlayer().sendPacket(new PacketServerGlobalValueChangeNotify(
-                    this.getEntity().getId(), "SGV_HexenzirkelLevel", (float) hexereiCount));
+                    this.getEntity().getId(), HexereiManager.TEAM_SGV, (float) hexereiCount));
         }
         this.getPlayer().sendPacket(new PacketTeamHexenzirkelChangeNotify(hexereiCount));
     }

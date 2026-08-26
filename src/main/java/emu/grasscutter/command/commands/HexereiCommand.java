@@ -3,7 +3,6 @@ package emu.grasscutter.command.commands;
 import emu.grasscutter.command.Command;
 import emu.grasscutter.command.CommandHandler;
 import emu.grasscutter.game.avatar.Avatar;
-import emu.grasscutter.game.player.HexereiDiagnostics;
 import emu.grasscutter.game.player.HexereiManager;
 import emu.grasscutter.game.player.HexereiManager.ActivationRecord;
 import emu.grasscutter.game.player.HexereiManager.ActivationResult;
@@ -51,7 +50,7 @@ public final class HexereiCommand implements CommandHandler {
         var teamEntity = target.getTeamManager().getEntity();
         Float serverCachedSgvValue = teamEntity == null
                 ? null
-                : teamEntity.getGlobalAbilityValues().get(HexereiDiagnostics.TEAM_SGV);
+                : teamEntity.getGlobalAbilityValues().get(HexereiManager.TEAM_SGV);
         TeamSnapshot snapshot = target.getHexereiManager().inspectTeam(
                 activeTeam.stream().map(entity -> entity.getAvatar()),
                 serverCachedSgvValue);
@@ -65,7 +64,7 @@ public final class HexereiCommand implements CommandHandler {
                 "hexerei team"
                         + " active_avatar_ids=" + activeAvatarIds
                         + " calculated_team_count=" + snapshot.calculatedTeamCount()
-                        + " sgv_name=" + HexereiDiagnostics.TEAM_SGV
+                        + " sgv_name=" + HexereiManager.TEAM_SGV
                         + " sgv_send_value=" + snapshot.sgvValueToSend()
                         + " team_entity_id=" + value(teamEntity == null ? null : teamEntity.getId())
                         + " server_cached_present=" + (snapshot.serverCachedSgvValue() != null)
@@ -86,30 +85,6 @@ public final class HexereiCommand implements CommandHandler {
                             + " actual_depot_id=" + member.actualSkillDepotId()
                             + " consistency=" + member.consistency());
         }
-
-        activeTeam.stream()
-                .filter(HexereiDiagnostics::isVentiEntity)
-                .findFirst()
-                .ifPresent(venti -> {
-                    boolean hexAbilityInstanced = venti.getInstancedAbilities().stream()
-                            .filter(ability -> ability != null && ability.getData() != null)
-                            .anyMatch(ability -> HexereiDiagnostics.VENTI_HEX_ABILITY.equals(
-                                    ability.getData().abilityName));
-                    boolean hexExtraEmbryoPresent = venti.getAvatar().getExtraAbilityEmbryos() != null
-                            && venti.getAvatar().getExtraAbilityEmbryos()
-                                    .contains(HexereiDiagnostics.VENTI_HEX_ABILITY);
-                    var values = venti.getGlobalAbilityValues();
-                    CommandHandler.sendMessage(
-                            sender,
-                            "hexerei venti_boundary"
-                                    + " entity_id=" + venti.getId()
-                                    + " hex_extra_embryo_present=" + hexExtraEmbryoPresent
-                                    + " hex_ability_instanced=" + hexAbilityInstanced
-                                    + " is_hex_value="
-                                    + value(values.get(HexereiDiagnostics.VENTI_IS_HEX_VALUE))
-                                    + " burst_enchanted_value="
-                                    + value(values.get(HexereiDiagnostics.VENTI_BURST_ENCHANTED_VALUE)));
-                });
     }
 
     private void status(Player sender, Player target, List<String> args) {

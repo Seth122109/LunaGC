@@ -8,6 +8,7 @@ import emu.grasscutter.game.player.HexereiManager.ActivationResult;
 import emu.grasscutter.game.player.HexereiManager.Consistency;
 import emu.grasscutter.game.player.HexereiManager.RosterEntry;
 import emu.grasscutter.game.player.HexereiManager.TeamMemberSnapshot;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -281,11 +282,12 @@ class HexereiManagerTest {
     }
 
     @Test
-    void ventiDiagnosticFilterIsLimitedToExactNormalAttackBoundary() {
-        assertTrue(HexereiDiagnostics.isVentiNormalAttackName("Avatar_Venti_ShootArrow_01"));
-        assertTrue(HexereiDiagnostics.isVentiNormalAttackName("Avatar_Venti_ShootArrow_06"));
-        assertFalse(HexereiDiagnostics.isVentiNormalAttackName("Avatar_Venti_Hurricane"));
-        assertFalse(HexereiDiagnostics.isVentiNormalAttackName("Avatar_Klee_ShootArrow_01"));
+    void cachesExactEffectiveTeamCountForServerPredicates() {
+        Map<String, Float> values = new HashMap<>();
+
+        HexereiManager.cacheTeamSgv(values, 2);
+
+        assertEquals(2f, values.get(HexereiManager.TEAM_SGV));
     }
 
     private static HexereiManager activatedFor(RosterEntry... entries) {

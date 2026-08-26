@@ -1,13 +1,11 @@
 package emu.grasscutter.game.ability;
 
-import emu.grasscutter.Grasscutter;
 import emu.grasscutter.data.GameData;
 import emu.grasscutter.data.binout.AbilityModifier.AbilityModifierAction;
 import emu.grasscutter.data.excels.ProudSkillData;
 import emu.grasscutter.game.avatar.Avatar;
 import emu.grasscutter.game.entity.EntityAvatar;
 import emu.grasscutter.game.entity.GameEntity;
-import emu.grasscutter.game.player.HexereiDiagnostics;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +39,7 @@ public final class PredicateEvaluator {
         }
         return switch (type) {
             case "ByHasModifier"      -> byHasModifier(pred, ability, resolved);
-            case "ByTargetGlobalValue" -> byTargetGlobalValue(pred, ability, resolved, action);
+            case "ByTargetGlobalValue" -> byTargetGlobalValue(pred, ability, resolved);
             case "ByTargetHPRatio"    -> byTargetHPRatio(pred, ability, resolved);
             default -> true;
         };
@@ -106,11 +104,7 @@ public final class PredicateEvaluator {
         return false;
     }
 
-    private static boolean byTargetGlobalValue(
-            Map<String, Object> pred,
-            Ability ability,
-            GameEntity target,
-            AbilityModifierAction action) {
+    private static boolean byTargetGlobalValue(Map<String, Object> pred, Ability ability, GameEntity target) {
         if (target == null) return false;
         Object key = pred.get("key");
         if (!(key instanceof String k)) return false;
@@ -118,7 +112,7 @@ public final class PredicateEvaluator {
         float bound = readFloat(pred.get("value"));
         Object cmpObj = pred.get("compareType");
         String cmp = cmpObj instanceof String s ? s : "Equal";
-        boolean result = switch (cmp) {
+        return switch (cmp) {
             case "MoreThan", "Greater"    -> current > bound;
             case "MoreThanAndEqual", "MoreOrEqual", "GreaterOrEqual" -> current >= bound;
             case "LessThan", "Lesser"     -> current < bound;
@@ -126,20 +120,6 @@ public final class PredicateEvaluator {
             case "NotEqual"               -> current != bound;
             default                       -> current == bound;
         };
-        if (HexereiDiagnostics.isPrimaryNormalAttackBranch(action)
-                && HexereiDiagnostics.shouldTraceNormalAttackPredicate(ability, k)) {
-            Grasscutter.getLogger().info(
-                    "{} event=normal_attack_predicate ability={} key={} target_entity_id={} current={} compare={} bound={} result={}",
-                    HexereiDiagnostics.TAG,
-                    HexereiDiagnostics.abilityName(ability),
-                    k,
-                    target.getId(),
-                    current,
-                    cmp,
-                    bound,
-                    result);
-        }
-        return result;
     }
 
     private static boolean byTargetHPRatio(Map<String, Object> pred, Ability ability, GameEntity target) {

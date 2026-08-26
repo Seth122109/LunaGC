@@ -1,6 +1,5 @@
 package emu.grasscutter.server.packet.send;
 
-import emu.grasscutter.Grasscutter;
 import emu.grasscutter.data.GameData;
 import emu.grasscutter.data.binout.OpenConfigEntry;
 import emu.grasscutter.data.binout.OpenConfigEntry.AbilityVarSetter;
@@ -11,8 +10,8 @@ import emu.grasscutter.data.excels.avatar.AvatarTalentData;
 import emu.grasscutter.game.avatar.Avatar;
 import emu.grasscutter.game.entity.EntityAvatar;
 import emu.grasscutter.game.inventory.GameItem;
+import emu.grasscutter.game.player.HexereiManager;
 import emu.grasscutter.game.player.Player;
-import emu.grasscutter.game.player.HexereiDiagnostics;
 import emu.grasscutter.net.packet.*;
 import emu.grasscutter.net.proto.AbilityAppliedAbilityOuterClass.AbilityAppliedAbility;
 import emu.grasscutter.net.proto.AbilitySyncStateInfoOuterClass.AbilitySyncStateInfo;
@@ -57,26 +56,13 @@ public class PacketPlayerEnterSceneInfoNotify extends BasePacket {
 
         int hexCount = player.getHexereiManager().countEffectiveActivations(
                 player.getTeamManager().getActiveTeam().stream().map(EntityAvatar::getAvatar));
-        if (HexereiDiagnostics.hasEffectivelyActiveVenti(player)) {
-            var teamEntity = player.getTeamManager().getEntity();
-            Float serverCachedValue = teamEntity == null
-                    ? null
-                    : teamEntity.getGlobalAbilityValues().get(HexereiDiagnostics.TEAM_SGV);
-            Grasscutter.getLogger().info(
-                    "{} event=team_sgv_sync phase=enter_scene uid={} active_avatar_ids={} calculated_count={} send_value={} team_entity_id={} server_cached_before={}",
-                    HexereiDiagnostics.TAG,
-                    player.getUid(),
-                    HexereiDiagnostics.activeAvatarIds(player),
-                    hexCount,
-                    (float) hexCount,
-                    teamEntity == null ? "NONE" : teamEntity.getId(),
-                    serverCachedValue == null ? "NONE" : serverCachedValue);
-        }
+        HexereiManager.cacheTeamSgv(
+                player.getTeamManager().getEntity().getGlobalAbilityValues(), hexCount);
 
         AbilityScalarValueEntry hexLevel = AbilityScalarValueEntry.newBuilder()
                 .setKey(AbilityString.newBuilder()
-                        .setHash(Utils.abilityHash("SGV_HexenzirkelLevel"))
-                        .setStr("SGV_HexenzirkelLevel")
+                        .setHash(Utils.abilityHash(HexereiManager.TEAM_SGV))
+                        .setStr(HexereiManager.TEAM_SGV)
                         .build())
                 .setFloatValue(hexCount)
                 .build();

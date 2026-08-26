@@ -1,6 +1,6 @@
 # GC 7.0 Hexerei character verification matrix
 
-Status date: 2026-08-24
+Status date: 2026-08-26
 Scope: PR #1 runtime-validation plan after rebasing onto `7.0.0` commit `4b43902`
 Evidence boundary: source/resource-derived expectations plus user-controlled UAT; no authoritative quest completion is available
 
@@ -32,18 +32,20 @@ Run each row on the same user-controlled test account and record command output,
 | Reset all | `hexerei reset all` | Hexerei namespace empty | Count `0` | No quest/avatar field restoration is needed because none was changed |
 | Invalid record | Only if a controlled fixture exists; do not corrupt live data | `INVALID_RECORD`; fail closed until reset | Excluded | Activation refuses to overwrite the invalid record |
 
-## Venti red/green diagnostic loop
+## Venti proven-seam green UAT loop
 
-Use only the uniquely named diagnostic candidate. Do not run `/sgv`; it is write-only and would force the tested value.
+Use only the uniquely named green-UAT candidate. Do not run `/sgv`; it is write-only and would force the tested value.
 
 1. Put effectively active Durin `10000123` and Venti `10000022` in the same active party.
-2. Run `hexerei team`. Required count-side evidence is both members `mapped=true`, `eligible=true`, `effective_active=true`, `calculated_team_count=2`, and `sgv_send_value=2.0`. Record `server_cached_present/value` separately; it is the server predicate cache, not a command write.
-3. Record `hexerei venti_boundary`: `hex_extra_embryo_present`, `hex_ability_instanced`, `_ABILITY_Venti_Is_Hexenzirkel`, and `_ABILITY_Venti_ElementalBurst_Enchanted`.
-4. Cast Venti's burst. Run `hexerei team` again immediately, then perform one normal attack.
-5. Capture only `[HEX-V70-VENTI-DIAG-4F2C]` lines. A complete attempt contains the burst/runtime-value transition if received, the primary normal-attack predicate values in evaluation order until the first false result, and `normal_attack_branch` selecting `HEX_BULLET` or `BASE_BULLET`.
-6. Repeat once without changing party or activation. The same boundary must produce the same classification before any fix is considered.
+2. Run `hexerei team`. Required count-side evidence is both members `mapped=true`, `eligible=true`, `effective_active=true`, `calculated_team_count=2`, `sgv_send_value=2.0`, `server_cached_present=true`, and `server_cached_value=2.0`. The command is read-only; the cache is written automatically by team update and enter-scene delivery.
+3. Use the exact user-corrected action order: Durin E, normal attack, Durin burst, Venti burst, Venti E, then normal attacks.
+4. Confirm Venti's post-burst normal attacks receive the expected Anemo infusion while base skill, burst, talent levels, and constellation state remain unchanged.
+5. Run `hexerei team` again and confirm the calculated, sent, and server-cached values remain `2`/`2.0`/`2.0`.
+6. Repeat once without changing party or activation. The count/cache values and gameplay result must be stable.
 
-This loop is red-capable for the reported symptom but remains user-controlled because server/client/game process control is outside source-task authority. Do not repair a seam until its captured values falsify the alternatives. Remove or explicitly gate the diagnostic tag before a release candidate.
+This loop remains user-controlled because server/client/game process control is outside source-task authority. Stop and preserve evidence if the cache is absent, Venti's effect is still missing, or unrelated behavior changes; do not infer or add a server normal-attack branch repair.
+
+Captured red result: both members were active/eligible/depot-consistent and the calculated/send count was `2`/`2.0`, but the server team cache was absent. Venti's Hex open-config embryo and instanced ability were absent, `_ABILITY_Venti_Is_Hexenzirkel` was unset, and the burst flag transitioned `0.0 -> 1.0 -> 0.0`. No temporary normal-attack predicate/branch probe fired. Source plus runtime log evidence ties the missing Venti ability to open-config aggregation aborting when optional `RelicTalents` is absent, and ties the missing server predicate SGV to packet-only delivery without a team-entity cache write.
 
 ## Talent and C0-C6 protocol
 
