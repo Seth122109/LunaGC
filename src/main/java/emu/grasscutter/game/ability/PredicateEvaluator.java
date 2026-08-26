@@ -30,7 +30,8 @@ public final class PredicateEvaluator {
         GameEntity resolved = resolveTarget(pred, ability, owner, target);
         if ("BJJDEAIEIGP".equals(type)) {
             GameEntity caster = ability != null ? ability.getCasterEntity() : null;
-            return hasHexenzirkelTag(caster != null ? caster : (owner != null ? owner : resolved));
+            return hasEffectiveHexereiActivation(
+                    caster != null ? caster : (owner != null ? owner : resolved));
         }
         if ("ByUnlockTalentParam".equals(type)) {
             GameEntity caster = ability != null ? ability.getCasterEntity() : null;
@@ -63,12 +64,13 @@ public final class PredicateEvaluator {
         };
     }
 
-    private static boolean hasHexenzirkelTag(GameEntity target) {
+    private static boolean hasEffectiveHexereiActivation(GameEntity target) {
         if (!(target instanceof EntityAvatar ea)) return false;
         Avatar avatar = ea.getAvatar();
-        if (avatar == null || avatar.getAvatarData() == null) return false;
-        var tags = avatar.getAvatarData().getTags();
-        return tags != null && tags.contains("AVATAR_TAG_HEXENZIRKEL");
+        return avatar != null
+                && avatar.getPlayer() != null
+                && avatar.getPlayer().getHexereiManager() != null
+                && avatar.getPlayer().getHexereiManager().isEffectivelyActive(avatar);
     }
 
     private static boolean byUnlockTalentParam(Map<String, Object> pred, GameEntity target) {
@@ -77,8 +79,8 @@ public final class PredicateEvaluator {
         if (!(target instanceof EntityAvatar ea)) return false;
         Avatar avatar = ea.getAvatar();
         if (avatar == null) return false;
-        if (avatar.getProudSkillList() != null) {
-            for (int proudSkillId : avatar.getProudSkillList()) {
+        if (avatar.getEffectiveProudSkillList() != null) {
+            for (int proudSkillId : avatar.getEffectiveProudSkillList()) {
                 ProudSkillData ps = GameData.getProudSkillDataMap().get(proudSkillId);
                 if (ps != null && talentParam.equals(ps.getOpenConfig())) return true;
             }

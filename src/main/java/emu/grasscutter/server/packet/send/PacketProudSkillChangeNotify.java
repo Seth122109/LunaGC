@@ -14,7 +14,7 @@ public class PacketProudSkillChangeNotify extends BasePacket {
                         .setAvatarGuid(avatar.getGuid())
                         .setEntityId(avatar.getEntityId())
                         .setSkillDepotId(avatar.getSkillDepotId())
-                        .addAllProudSkillList(avatar.getProudSkillList())
+                        .addAllProudSkillList(avatar.getEffectiveProudSkillList())
                         .build();
 
         this.setData(proto);

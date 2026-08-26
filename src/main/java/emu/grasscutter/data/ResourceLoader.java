@@ -580,32 +580,13 @@ public final class ResourceLoader {
         }
 
         if (list == null) {
-            Map<String, OpenConfigEntry> map = new TreeMap<>();
             String[] folderNames = {
                 "BinOutput/Talent/EquipTalents/",
                 "BinOutput/Talent/AvatarTalents/",
                 "BinOutput/Talent/RelicTalents/"
             };
-
-            for (String folderName : folderNames) {
-                try {
-                    Files.newDirectoryStream(getResourcePath(folderName), "*.json")
-                            .forEach(
-                                    path -> {
-                                        try {
-                                            JsonUtils.loadToMap(path, String.class, OpenConfigData[].class)
-                                                    .forEach((name, data) -> map.put(name, new OpenConfigEntry(name, data)));
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
-                                        }
-                                    });
-                } catch (IOException e) {
-                    Grasscutter.getLogger()
-                            .error("Error loading open config: no files found in " + folderName);
-                    return;
-                }
-            }
-
+            Map<String, OpenConfigEntry> map = loadOpenConfigDirectories(
+                    Arrays.stream(folderNames).map(folderName -> getResourcePath(folderName)).toList());
             list = new ArrayList<>(map.values());
         }
 
@@ -617,6 +598,35 @@ public final class ResourceLoader {
         for (OpenConfigEntry entry : list) {
             GameData.getOpenConfigEntries().put(entry.getName(), entry);
         }
+    }
+
+    static Map<String, OpenConfigEntry> loadOpenConfigDirectories(List<Path> directories) {
+        return loadOpenConfigDirectories(
+                directories,
+                directory -> Grasscutter.getLogger()
+                        .error("Error loading open config: no files found in " + directory));
+    }
+
+    static Map<String, OpenConfigEntry> loadOpenConfigDirectories(
+            List<Path> directories, java.util.function.Consumer<Path> missingDirectoryHandler) {
+        Map<String, OpenConfigEntry> map = new TreeMap<>();
+        for (Path directory : directories) {
+            try (DirectoryStream<Path> paths = Files.newDirectoryStream(directory, "*.json")) {
+                paths.forEach(
+                        path -> {
+                            try {
+                                JsonUtils.loadToMap(path, String.class, OpenConfigData[].class)
+                                        .forEach((name, data) -> map.put(name, new OpenConfigEntry(name, data)));
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+            } catch (IOException e) {
+                missingDirectoryHandler.accept(directory);
+                continue;
+            }
+        }
+        return map;
     }
 
     private static void loadQuests() {

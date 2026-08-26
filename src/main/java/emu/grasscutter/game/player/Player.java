@@ -201,6 +201,7 @@ public class Player implements PlayerHook, FieldFetch {
 
     @Getter private PlayerProgress playerProgress;
     @Getter private Set<Integer> activeQuestTimers;
+    @Getter private HexereiManager hexereiManager;
 
     @Getter @Setter private ElementType mainCharacterElement = ElementType.None;
 
@@ -257,6 +258,7 @@ public class Player implements PlayerHook, FieldFetch {
         this.playerProgress = new PlayerProgress();
         this.activeQuestTimers = new HashSet<>();
         this.cityInfoData = new HashMap<>();
+        this.hexereiManager = new HexereiManager(this);
 
         this.attackResults = new LinkedBlockingQueue<>();
         this.coopRequests = new Int2ObjectOpenHashMap<>();
@@ -1287,6 +1289,10 @@ public class Player implements PlayerHook, FieldFetch {
 
     @PostLoad
     private void onLoad() {
+        if (this.hexereiManager == null) {
+            this.hexereiManager = new HexereiManager();
+        }
+        this.hexereiManager.attachPlayer(this);
         this.getCodex().setPlayer(this);
         this.getProgressManager().setPlayer(this);
         this.getTeamManager().setPlayer(this);

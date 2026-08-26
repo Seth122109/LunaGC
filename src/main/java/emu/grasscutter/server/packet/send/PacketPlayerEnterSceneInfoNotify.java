@@ -10,6 +10,7 @@ import emu.grasscutter.data.excels.avatar.AvatarTalentData;
 import emu.grasscutter.game.avatar.Avatar;
 import emu.grasscutter.game.entity.EntityAvatar;
 import emu.grasscutter.game.inventory.GameItem;
+import emu.grasscutter.game.player.HexereiManager;
 import emu.grasscutter.game.player.Player;
 import emu.grasscutter.net.packet.*;
 import emu.grasscutter.net.proto.AbilityAppliedAbilityOuterClass.AbilityAppliedAbility;
@@ -27,14 +28,7 @@ import java.util.stream.Collectors;
 
 public class PacketPlayerEnterSceneInfoNotify extends BasePacket {
 
-    private static volatile Set<Integer> HEX_IDS_CACHE;
     private static volatile Set<Integer> MOON_IDS_CACHE;
-
-    public static Set<Integer> getHexenzirkelIds() {
-        Set<Integer> s = HEX_IDS_CACHE;
-        if (s == null) HEX_IDS_CACHE = s = buildTaggedSet("AVATAR_TAG_HEXENZIRKEL");
-        return s;
-    }
 
     public static Set<Integer> getMoonphaseIds() {
         Set<Integer> s = MOON_IDS_CACHE;
@@ -60,14 +54,15 @@ public class PacketPlayerEnterSceneInfoNotify extends BasePacket {
                 .build();
                 player.setPhlogistonValue(100);
 
-        long hexCount = player.getTeamManager().getActiveTeam().stream()
-                .filter(e -> getHexenzirkelIds().contains(e.getAvatar().getAvatarId()))
-                .count();
+        int hexCount = player.getHexereiManager().countEffectiveActivations(
+                player.getTeamManager().getActiveTeam().stream().map(EntityAvatar::getAvatar));
+        HexereiManager.cacheTeamSgv(
+                player.getTeamManager().getEntity().getGlobalAbilityValues(), hexCount);
 
         AbilityScalarValueEntry hexLevel = AbilityScalarValueEntry.newBuilder()
                 .setKey(AbilityString.newBuilder()
-                        .setHash(Utils.abilityHash("SGV_HexenzirkelLevel"))
-                        .setStr("SGV_HexenzirkelLevel")
+                        .setHash(Utils.abilityHash(HexereiManager.TEAM_SGV))
+                        .setStr(HexereiManager.TEAM_SGV)
                         .build())
                 .setFloatValue(hexCount)
                 .build();
@@ -154,7 +149,7 @@ public class PacketPlayerEnterSceneInfoNotify extends BasePacket {
                     .build());
         }
 
-        for (int proudSkillId : avatar.getProudSkillList()) {
+        for (int proudSkillId : avatar.getEffectiveProudSkillList()) {
             applyProudSkillVars(proudSkillId, info);
         }
 
