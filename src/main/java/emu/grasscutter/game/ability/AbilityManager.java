@@ -86,10 +86,12 @@ public final class AbilityManager extends BasePlayerManager {
     private long arlecchinoChargedAttackTime = 0L;
     private long arlecchinoESkillTime = 0L;
     private final CelestialGiftRelicEffect celestialGiftRelicEffect;
+    private final AngelosHeptadesWeaponEffect angelosHeptadesWeaponEffect;
 
     public AbilityManager(Player player) {
         super(player);
         this.celestialGiftRelicEffect = new CelestialGiftRelicEffect();
+        this.angelosHeptadesWeaponEffect = new AngelosHeptadesWeaponEffect();
         removePendingEnergyClear();
     }
 
@@ -843,6 +845,9 @@ public final class AbilityManager extends BasePlayerManager {
             }
 
             var modifierData = (AbilityModifier) modifierArray[modChange.getModifierLocalId()];
+            var angelosSource =
+                    this.findAngelosHeptadesSourceAbility(head, entity, instancedAbilityData);
+            this.tryActivateAngelosHeptades(angelosSource, modifierData);
             if (entity.getInstancedModifiers().containsKey(head.getInstancedModifierId())) {
                 Grasscutter.getLogger()
                     .trace(
@@ -914,6 +919,107 @@ public final class AbilityManager extends BasePlayerManager {
         } else {
 
             Grasscutter.getLogger().debug("Unknown action");
+        }
+    }
+
+    private void tryActivateAngelosHeptades(Ability sourceAbility, AbilityModifier modifierData) {
+        if (sourceAbility == null || !AngelosShieldTrigger.isShieldCreationModifier(modifierData)) {
+            return;
+        }
+        var wearerEntity =
+                sourceAbility.getOwner() instanceof EntityAvatar avatarEntity ? avatarEntity : null;
+        if (wearerEntity == null || wearerEntity.getAvatar() == null) return;
+        var teamManager = this.player.getTeamManager();
+        var currentActive = teamManager.getCurrentAvatarEntity();
+        if (currentActive == null || currentActive.getAvatar() == null || wearerEntity.getScene() == null) return;
+        var team = teamManager.getActiveTeam().stream().map(EntityAvatar::getAvatar).filter(Objects::nonNull).toList();
+        var hexereiManager = this.player.getHexereiManager();
+        this.angelosHeptadesWeaponEffect.onShieldCreated(
+                wearerEntity.getAvatar(),
+                currentActive.getAvatar(),
+                team,
+                teamManager.getEffectiveHexereiCount(),
+                avatar -> hexereiManager != null && hexereiManager.isEffectivelyActive(avatar),
+                System.currentTimeMillis(),
+                (expiry, delayTicks) -> wearerEntity.getScene().getScheduler().scheduleDelayedTask(expiry, delayTicks),
+                new AngelosHeptadesWeaponEffect.Publisher() {
+                    @Override public void publishDamage(Avatar avatar) {
+                        publishAngelosHeptadesDamage(avatar);
+                    }
+                    @Override public void publishEnergy(Avatar avatar, FightProperty property) {
+                        publishAngelosHeptadesEnergy(avatar, property);
+                    }
+                });
+    }
+
+    private Ability findAngelosHeptadesSourceAbility(
+            AbilityInvokeEntryHead head, GameEntity modifierTarget, AbilityData abilityData) {
+        if (head == null || modifierTarget == null || abilityData == null) return null;
+
+        int abilityIndex = head.getInstancedAbilityId() - 1;
+        if (abilityIndex >= 0 && head.getTargetId() != 0) {
+            var referencedEntity = this.player.getScene().getEntityById(head.getTargetId());
+            var referencedAbility = this.angelosAbilityAt(referencedEntity, abilityIndex, abilityData);
+            if (referencedAbility != null) return referencedAbility;
+        }
+
+        var targetAbility = this.angelosAbilityAt(modifierTarget, abilityIndex, abilityData);
+        if (targetAbility != null) return targetAbility;
+
+        Ability uniqueSource = null;
+        for (var member : this.player.getTeamManager().getActiveTeam()) {
+            for (var ability : member.getInstancedAbilities()) {
+                if (!this.isAngelosAbilityOwner(ability, abilityData)) continue;
+                if (uniqueSource != null && uniqueSource.getOwner() != ability.getOwner()) return null;
+                uniqueSource = ability;
+            }
+        }
+        return uniqueSource;
+    }
+
+    private Ability angelosAbilityAt(GameEntity entity, int index, AbilityData expectedData) {
+        if (entity == null || index < 0 || index >= entity.getInstancedAbilities().size()) return null;
+        var ability = entity.getInstancedAbilities().get(index);
+        return this.isAngelosAbilityOwner(ability, expectedData) ? ability : null;
+    }
+
+    private boolean isAngelosAbilityOwner(Ability ability, AbilityData expectedData) {
+        if (ability == null
+                || ability.getData() == null
+                || expectedData.abilityName == null
+                || !expectedData.abilityName.equals(ability.getData().abilityName)
+                || !(ability.getOwner() instanceof EntityAvatar avatarEntity)
+                || avatarEntity.getAvatar() == null) {
+            return false;
+        }
+        return AngelosHeptadesWeaponEffect.resolve(avatarEntity.getAvatar().getWeapon()).isPresent();
+    }
+
+    public void refreshAngelosHeptadesTeam() {
+        var teamManager = this.player.getTeamManager();
+        var currentActive = teamManager.getCurrentAvatarEntity();
+        if (currentActive == null || currentActive.getAvatar() == null) return;
+        var hexereiManager = this.player.getHexereiManager();
+        this.angelosHeptadesWeaponEffect.refreshCurrentActive(
+                currentActive.getAvatar(),
+                teamManager.getActiveTeam().stream().map(EntityAvatar::getAvatar).filter(Objects::nonNull).toList(),
+                teamManager.getEffectiveHexereiCount(),
+                avatar -> hexereiManager != null && hexereiManager.isEffectivelyActive(avatar),
+                new AngelosHeptadesWeaponEffect.Publisher() {
+                    @Override public void publishDamage(Avatar avatar) { publishAngelosHeptadesDamage(avatar); }
+                    @Override public void publishEnergy(Avatar avatar, FightProperty property) { publishAngelosHeptadesEnergy(avatar, property); }
+                });
+    }
+
+    private static void publishAngelosHeptadesDamage(Avatar avatar) {
+        if (avatar != null && avatar.getPlayer() != null) {
+            avatar.getPlayer().sendPacket(new PacketAvatarFightPropUpdateNotify(avatar, FightProperty.FIGHT_PROP_ADD_HURT));
+        }
+    }
+
+    private static void publishAngelosHeptadesEnergy(Avatar avatar, FightProperty property) {
+        if (avatar != null && avatar.getPlayer() != null && property != null) {
+            avatar.getPlayer().sendPacket(new PacketAvatarFightPropUpdateNotify(avatar, property));
         }
     }
 

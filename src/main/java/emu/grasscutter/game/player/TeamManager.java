@@ -358,6 +358,7 @@ public final class TeamManager extends BasePlayerDataManager {
         this.sendHexereiTeamUpdate();
         if (this.getPlayer().getAbilityManager() != null) {
             this.getPlayer().getAbilityManager().refreshCelestialGiftTeam();
+            this.getPlayer().getAbilityManager().refreshAngelosHeptadesTeam();
         }
     }
 
@@ -758,6 +759,7 @@ public final class TeamManager extends BasePlayerDataManager {
         this.getPlayer().sendPacket(new PacketChangeAvatarRsp(guid));
         if (this.getPlayer().getAbilityManager() != null) {
             this.getPlayer().getAbilityManager().refreshCelestialGiftTeam();
+            this.getPlayer().getAbilityManager().refreshAngelosHeptadesTeam();
         }
     }
 

@@ -14,7 +14,8 @@ import java.util.*;
         usage = {
             "[set] <stat> <value>",
             "(lock|freeze) <stat> [<value>]", // Can lock to current value
-            "(unlock|unfreeze) <stat>"
+            "(unlock|unfreeze) <stat>",
+            "read <stat> [<avatarId>]"
         },
         permission = "player.setstats",
         permissionTargeted = "player.setstats.others")
@@ -88,6 +89,7 @@ public final class SetStatsCommand implements CommandHandler {
                     case "set" -> Action.ACTION_SET; // Explicit set command
                     case "lock", "freeze" -> Action.ACTION_LOCK;
                     case "unlock", "unfreeze" -> Action.ACTION_UNLOCK;
+                    case "read" -> Action.ACTION_READ;
                 };
         if (statStr == null) {
             statStr = args.remove(0).toLowerCase();
@@ -99,6 +101,23 @@ public final class SetStatsCommand implements CommandHandler {
         Stat stat = stats.get(statStr);
         EntityAvatar entity = targetPlayer.getTeamManager().getCurrentAvatarEntity();
         Avatar avatar = entity.getAvatar();
+
+        if (action == Action.ACTION_READ && !args.isEmpty()) {
+            String avatarIdStr = args.remove(0);
+            try {
+                int avatarId = Integer.parseInt(avatarIdStr);
+                avatar = targetPlayer.getAvatars().getAvatarById(avatarId);
+            } catch (NumberFormatException ignored) {
+                CommandHandler.sendMessage(
+                        sender, "stats error=invalid_avatar_id avatar_id=" + avatarIdStr);
+                return;
+            }
+            if (avatar == null) {
+                CommandHandler.sendMessage(
+                        sender, "stats error=avatar_not_owned avatar_id=" + avatarIdStr);
+                return;
+            }
+        }
 
         // Get the value if the action requires it
         try {
@@ -112,6 +131,9 @@ public final class SetStatsCommand implements CommandHandler {
                     value = parsePercent(args.remove(0));
                     break;
                 case ACTION_UNLOCK:
+                    break;
+                case ACTION_READ:
+                    value = avatar.getFightProperty(stat.prop);
                     break;
             }
         } catch (NumberFormatException ignored) {
@@ -140,6 +162,8 @@ public final class SetStatsCommand implements CommandHandler {
                 avatar.getFightPropOverrides().remove(stat.prop.getId());
                 avatar.recalcStats();
                 break;
+            case ACTION_READ:
+                break;
         }
 
         // Report action
@@ -147,6 +171,17 @@ public final class SetStatsCommand implements CommandHandler {
             valueStr = String.format("%.1f%%", value * 100f);
         } else {
             valueStr = String.format("%.0f", value);
+        }
+        if (action == Action.ACTION_READ) {
+            CommandHandler.sendMessage(
+                    sender,
+                    "stats action=read avatar_id="
+                            + avatar.getAvatarId()
+                            + " stat="
+                            + stat.name
+                            + " value="
+                            + valueStr);
+            return;
         }
         if (targetPlayer == sender) {
             CommandHandler.sendTranslatedMessage(sender, action.messageKeySelf, stat.name, valueStr);
@@ -160,7 +195,8 @@ public final class SetStatsCommand implements CommandHandler {
     private enum Action {
         ACTION_SET("commands.generic.set_to", "commands.generic.set_for_to"),
         ACTION_LOCK("commands.setStats.locked_to", "commands.setStats.locked_for_to"),
-        ACTION_UNLOCK("commands.setStats.unlocked", "commands.setStats.unlocked_for");
+        ACTION_UNLOCK("commands.setStats.unlocked", "commands.setStats.unlocked_for"),
+        ACTION_READ(null, null);
         public final String messageKeySelf;
         public final String messageKeyOther;
 
