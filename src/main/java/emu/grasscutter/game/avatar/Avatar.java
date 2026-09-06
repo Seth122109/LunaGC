@@ -46,6 +46,8 @@ public class Avatar {
     @Transient @Getter private final Int2ObjectMap<GameItem> equips;
     @Transient @Getter private final Int2FloatOpenHashMap fightProperties;
     @Transient @Getter private final Int2FloatOpenHashMap fightPropOverrides;
+    @Transient private final Map<String, TransientFightPropertyModifier> transientFightPropertyModifiers;
+    @Transient private long nextTransientFightPropertyModifierGeneration;
     @Id private ObjectId id;
     @Indexed @Getter private int ownerId; // Id of player that this avatar belongs to
     @Transient private Player owner;
@@ -105,6 +107,7 @@ public class Avatar {
         this.equips = new Int2ObjectOpenHashMap<>();
         this.fightProperties = new Int2FloatOpenHashMap();
         this.fightPropOverrides = new Int2FloatOpenHashMap();
+        this.transientFightPropertyModifiers = new HashMap<>();
         this.extraAbilityEmbryos = new HashSet<>();
         this.fetters = new ArrayList<>(); // TODO Move to avatar
     }
@@ -392,6 +395,44 @@ public class Avatar {
     public void addFightProperty(FightProperty prop, float value) {
         this.getFightProperties().put(prop.getId(), getFightProperty(prop) + value);
     }
+
+    public synchronized long upsertTransientFightPropertyModifier(
+            String key, FightProperty property, float value) {
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(property, "property");
+
+        var previous = this.transientFightPropertyModifiers.remove(key);
+        if (previous != null) {
+            this.addFightProperty(previous.property(), -previous.value());
+        }
+
+        long generation = ++this.nextTransientFightPropertyModifierGeneration;
+        this.transientFightPropertyModifiers.put(
+                key, new TransientFightPropertyModifier(property, value, generation));
+        this.addFightProperty(property, value);
+        return generation;
+    }
+
+    public synchronized boolean removeTransientFightPropertyModifier(
+            String key, long expectedGeneration) {
+        var current = this.transientFightPropertyModifiers.get(key);
+        if (current == null || current.generation() != expectedGeneration) {
+            return false;
+        }
+
+        this.transientFightPropertyModifiers.remove(key);
+        this.addFightProperty(current.property(), -current.value());
+        return true;
+    }
+
+    synchronized void reapplyTransientFightPropertyModifiers() {
+        this.transientFightPropertyModifiers.values().forEach(
+                modifier -> this.addFightProperty(modifier.property(), modifier.value()));
+    }
+
+    private record TransientFightPropertyModifier(
+            FightProperty property, float value, long generation) {}
+
     public void addSpecialEnergy(float energy){
        float curSpecialEnergy = getFightProperty(FightProperty.FIGHT_PROP_CUR_SPECIAL_ENERGY);
        float maxSpecialEnergy = getFightProperty(FightProperty.FIGHT_PROP_MAX_SPECIAL_ENERGY);
@@ -539,7 +580,7 @@ public class Avatar {
         recalcStats(false);
     }
 
-    public void recalcStats(boolean forceSendAbilityChange) {
+    public synchronized void recalcStats(boolean forceSendAbilityChange) {
         // Setup
         var data = this.getAvatarData();
         var promoteData =
@@ -781,6 +822,9 @@ public class Avatar {
 
         // Reapply all overrides
         this.fightProperties.putAll(this.fightPropOverrides);
+
+        // Reapply runtime-only ability modifiers after the static stat rebuild.
+        this.reapplyTransientFightPropertyModifiers();
 
         // Set current hp
         this.setFightProperty(

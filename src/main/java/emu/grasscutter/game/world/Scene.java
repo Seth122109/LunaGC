@@ -11,6 +11,7 @@ import emu.grasscutter.data.excels.monster.MonsterData;
 import emu.grasscutter.data.excels.scene.SceneData;
 import emu.grasscutter.data.excels.world.WorldLevelData;
 import emu.grasscutter.data.server.Grid;
+import emu.grasscutter.game.ability.actions.ActionApplyPredicatedModifier;
 import emu.grasscutter.game.avatar.Avatar;
 import emu.grasscutter.game.dungeons.DungeonManager;
 import emu.grasscutter.game.dungeons.DungeonSettleListener;
@@ -472,6 +473,11 @@ public class Scene {
         }
 
         target.damage(result.getDamage(), result.getAttackerId(), attackType);
+
+        if (attacker instanceof EntityAvatar avatarAttacker) {
+            ActionApplyPredicatedModifier.onLandedAttack(
+                    avatarAttacker, target, result.getDamage());
+        }
 
         if (attacker instanceof EntityAvatar arlecAttacker
                 && arlecAttacker.getAvatar().getAvatarId() == 10000096

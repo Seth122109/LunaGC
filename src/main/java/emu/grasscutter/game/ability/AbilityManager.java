@@ -41,6 +41,7 @@ import emu.grasscutter.net.proto.ChangeHpDebtsReasonOuterClass;
 import emu.grasscutter.net.proto.PropChangeReasonOuterClass;
 import emu.grasscutter.server.packet.send.PacketAbilityInvocationsNotify;
 import emu.grasscutter.server.packet.send.PacketAvatarFightPropNotify;
+import emu.grasscutter.server.packet.send.PacketAvatarFightPropUpdateNotify;
 import emu.grasscutter.server.packet.send.PacketEntityFightPropChangeReasonNotify;
 import emu.grasscutter.server.packet.send.PacketEntityFightPropUpdateNotify;
 import emu.grasscutter.server.packet.send.PacketPlayerEnterSceneInfoNotify;
@@ -84,9 +85,11 @@ public final class AbilityManager extends BasePlayerManager {
 
     private long arlecchinoChargedAttackTime = 0L;
     private long arlecchinoESkillTime = 0L;
+    private final CelestialGiftRelicEffect celestialGiftRelicEffect;
 
     public AbilityManager(Player player) {
         super(player);
+        this.celestialGiftRelicEffect = new CelestialGiftRelicEffect();
         removePendingEnergyClear();
     }
 
@@ -480,12 +483,69 @@ public final class AbilityManager extends BasePlayerManager {
         var event = new PlayerUseSkillEvent(player, skillData, currentAvatar.getAvatar());
         if (!event.call()) return;
 
+        this.tryActivateCelestialGift(currentAvatar, skillId);
+
         if (skillData.getCostElemVal() <= 0) {
             return;
         }
 
         this.burstSkillId = skillId;
         this.burstCasterId = casterId;
+    }
+
+    private void tryActivateCelestialGift(EntityAvatar currentAvatar, int skillId) {
+        if (currentAvatar == null || currentAvatar.getScene() == null) return;
+
+        Avatar wearer = currentAvatar.getAvatar();
+        var teamManager = this.player.getTeamManager();
+        if (wearer == null || teamManager == null) return;
+
+        var hexereiManager = this.player.getHexereiManager();
+        boolean effectivelyActive =
+                hexereiManager != null && hexereiManager.isEffectivelyActive(wearer);
+        var team = teamManager.getActiveTeam().stream()
+                .map(EntityAvatar::getAvatar)
+                .filter(Objects::nonNull)
+                .toList();
+        this.celestialGiftRelicEffect.onElementalSkill(
+                wearer,
+                wearer,
+                team,
+                skillId,
+                effectivelyActive,
+                teamManager.getEffectiveHexereiCount(),
+                (expiry, delayTicks) -> currentAvatar
+                        .getScene()
+                        .getScheduler()
+                        .scheduleDelayedTask(expiry, delayTicks),
+                AbilityManager::publishCelestialGiftProperties);
+    }
+
+    public void refreshCelestialGiftTeam() {
+        var teamManager = this.player.getTeamManager();
+        if (teamManager == null) return;
+
+        var currentAvatar = teamManager.getCurrentAvatarEntity();
+        if (currentAvatar == null || currentAvatar.getAvatar() == null) return;
+
+        var team = teamManager.getActiveTeam().stream()
+                .map(EntityAvatar::getAvatar)
+                .filter(Objects::nonNull)
+                .toList();
+        this.celestialGiftRelicEffect.refreshTeamAndCurrentActiveElement(
+                currentAvatar.getAvatar(), team, AbilityManager::publishCelestialGiftProperties);
+    }
+
+    private static void publishCelestialGiftProperties(
+            Avatar avatar, Map<Integer, Float> properties) {
+        if (avatar == null
+                || properties == null
+                || properties.isEmpty()
+                || avatar.getPlayer() == null
+                || avatar.getPlayer().getSession() == null) {
+            return;
+        }
+        avatar.getPlayer().sendPacket(new PacketAvatarFightPropUpdateNotify(avatar, properties));
     }
 
     public void onSkillEnd(Player player) {
@@ -813,7 +873,8 @@ public final class AbilityManager extends BasePlayerManager {
             if (fromParentName && modifierData.onAdded != null) {
                 for (var a : modifierData.onAdded) {
                     if (a.type == AbilityModifierAction.Type.AttachModifier
-                            || a.type == AbilityModifierAction.Type.ApplyModifier) {
+                            || a.type == AbilityModifierAction.Type.ApplyModifier
+                            || ActionApplyPredicatedModifier.isServerOrchestration(a.type)) {
                         hasOrchestration = true;
                         break;
                     }
