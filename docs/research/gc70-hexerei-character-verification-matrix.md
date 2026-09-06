@@ -47,6 +47,8 @@ This loop remains user-controlled because server/client/game process control is 
 
 Captured red result: both members were active/eligible/depot-consistent and the calculated/send count was `2`/`2.0`, but the server team cache was absent. Venti's Hex open-config embryo and instanced ability were absent, `_ABILITY_Venti_Is_Hexenzirkel` was unset, and the burst flag transitioned `0.0 -> 1.0 -> 0.0`. No temporary normal-attack predicate/branch probe fired. Source plus runtime log evidence ties the missing Venti ability to open-config aggregation aborting when optional `RelicTalents` is absent, and ties the missing server predicate SGV to packet-only delivery without a team-entity cache write.
 
+Captured green result (user-controlled UAT, 2026-08-29): with the repaired green-UAT candidate, `hexerei team` recorded Venti `10000022` and Durin `10000123` as mapped, eligible, effectively active, depot-consistent, and `ACTIVE_CONSISTENT`. It recorded `calculated_team_count=2`, `sgv_send_value=2.0`, `server_cached_present=true`, and `server_cached_value=2.0`. The user separately reported that Venti's post-burst normal attacks became Anemo-infused using the preserved sequence. Together these validate the original team-SGV and gameplay oracles for the two repaired source seams. The captured run has no second unchanged-party `hexerei team` snapshot, so repeat stability remains unrecorded.
+
 ## Talent and C0-C6 protocol
 
 For every character, capture `skillLevelMap`, `talentIdList`, raw/effective proud IDs, and status before activation. Repeat the inactive/active/reset comparison at C0, C1, C2, C3, C4, C5, and C6. Each constellation cell passes only if:
