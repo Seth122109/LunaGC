@@ -11,6 +11,7 @@ import emu.grasscutter.game.entity.GameEntity;
 import emu.grasscutter.game.player.Player;
 import emu.grasscutter.net.proto.AbilityStringOuterClass.AbilityString;
 import emu.grasscutter.utils.Utils;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.*;
 import java.util.*;
 import lombok.Getter;
@@ -47,6 +48,7 @@ public class Ability {
         if (casterAvatar != null) {
             applyConstellationSpecials(casterAvatar);
             applySkillSpecials(casterAvatar);
+            applyEquipAffixSpecials(this.data, casterAvatar, this.abilitySpecials);
         }
 
         hash = Utils.abilityHash(data.abilityName);
@@ -144,6 +146,56 @@ public class Ability {
                 abilitySpecials.put(setter.getVarName(), params[idx]);
             }
         });
+    }
+
+    public static void applyEquipAffixSpecials(
+            AbilityData abilityData,
+            Avatar avatar,
+            Object2FloatMap<String> specials) {
+        if (abilityData == null
+                || abilityData.abilityName == null
+                || avatar == null
+                || specials == null) {
+            return;
+        }
+
+        var equippedSetCounts = new Int2IntOpenHashMap();
+        for (int slotId = 1; slotId <= 5; slotId++) {
+            var item = avatar.getEquips().get(slotId);
+            if (item == null || item.getItemData() == null) continue;
+            int setId = item.getItemData().getSetId();
+            if (setId > 0) equippedSetCounts.addTo(setId, 1);
+        }
+
+        equippedSetCounts.forEach(
+                (setId, equippedCount) -> {
+                    var setData = GameData.getReliquarySetDataMap().get((int) setId);
+                    if (setData == null || setData.getSetNeedNum() == null) return;
+
+                    int[] setNeedNum = setData.getSetNeedNum();
+                    for (int setIndex = 0; setIndex < setNeedNum.length; setIndex++) {
+                        if (equippedCount < setNeedNum[setIndex]) break;
+
+                        int affixId = (setData.getEquipAffixId() * 10) + setIndex;
+                        var affix = GameData.getEquipAffixDataMap().get(affixId);
+                        if (affix == null
+                                || affix.getOpenConfig() == null
+                                || affix.getParamList() == null) {
+                            continue;
+                        }
+
+                        var entry = GameData.getOpenConfigEntries().get(affix.getOpenConfig());
+                        if (entry == null || entry.getAbilityVarSetters() == null) continue;
+
+                        float[] params = affix.getParamList();
+                        for (AbilityVarSetter setter : entry.getAbilityVarSetters()) {
+                            if (!abilityData.abilityName.equals(setter.getAbilityName())) continue;
+                            int paramIndex = setter.getParamIndex();
+                            if (paramIndex < 0 || paramIndex >= params.length) continue;
+                            specials.put(setter.getVarName(), params[paramIndex]);
+                        }
+                    }
+                });
     }
 
     public void processOnAddedAbilityModifiers() {

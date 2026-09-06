@@ -24,6 +24,7 @@ public class AbilityMixinData implements Serializable {
         DoActionByEventMixin,
         DoActionByKillingMixin,
         SkillButtonHoldChargeMixin,
+        GlobalMainShieldMixin,
         GlobalSubShieldMixin,
         TileAttackMixin,
         SwitchHealToHPDebtsMixin,

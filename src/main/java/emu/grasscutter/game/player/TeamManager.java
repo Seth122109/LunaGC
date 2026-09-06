@@ -356,6 +356,10 @@ public final class TeamManager extends BasePlayerDataManager {
         this.getPlayer().sendPacket(new PacketTeamMoonPhaseChangeNotify((int) moonPhaseCount));
 
         this.sendHexereiTeamUpdate();
+        if (this.getPlayer().getAbilityManager() != null) {
+            this.getPlayer().getAbilityManager().refreshCelestialGiftTeam();
+            this.getPlayer().getAbilityManager().refreshAngelosHeptadesTeam();
+        }
     }
 
     public int getEffectiveHexereiCount() {
@@ -753,6 +757,10 @@ public final class TeamManager extends BasePlayerDataManager {
 
         this.getPlayer().getScene().replaceEntity(oldEntity, newEntity);
         this.getPlayer().sendPacket(new PacketChangeAvatarRsp(guid));
+        if (this.getPlayer().getAbilityManager() != null) {
+            this.getPlayer().getAbilityManager().refreshCelestialGiftTeam();
+            this.getPlayer().getAbilityManager().refreshAngelosHeptadesTeam();
+        }
     }
 
     public void applyVoidDamage() {

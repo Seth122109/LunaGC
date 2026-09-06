@@ -101,6 +101,7 @@ public class AbilityModifier implements Serializable {
             AddGlobalValueToTarget,
             AddRegionalPlayVarValue,
             ApplyModifier,
+            POIDCNKIFGD,
             AttachAbilityStateResistance,
             AttachBulletAimPoint,
             AttachEffect,
@@ -457,6 +458,8 @@ public class AbilityModifier implements Serializable {
 
     public static class AbilityModifierProperty implements Serializable {
         public float Actor_HpThresholdRatio;
+        public DynamicFloat Actor_AttackRatio = DynamicFloat.ZERO;
+        public DynamicFloat Actor_CriticalDelta = DynamicFloat.ZERO;
 
     }
 
