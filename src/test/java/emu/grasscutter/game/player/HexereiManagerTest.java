@@ -155,6 +155,30 @@ class HexereiManagerTest {
     }
 
     @Test
+    void everyRosterActivationChangesOnlyItsOwnHexProudView() {
+        Set<Integer> rawProudSkills = HexereiManager.getRoster().values().stream()
+                .map(RosterEntry::proudSkillId)
+                .collect(Collectors.toSet());
+        rawProudSkills.add(999999);
+        Set<Integer> originalRawProudSkills = Set.copyOf(rawProudSkills);
+
+        for (RosterEntry entry : HexereiManager.getRoster().values()) {
+            Set<Integer> inactive = HexereiManager.effectiveProudSkillView(
+                    entry.avatarId(), rawProudSkills, false);
+            Set<Integer> active = HexereiManager.effectiveProudSkillView(
+                    entry.avatarId(), rawProudSkills, true);
+
+            assertFalse(inactive.contains(entry.proudSkillId()), entry.name());
+            assertTrue(active.containsAll(originalRawProudSkills), entry.name());
+            assertEquals(originalRawProudSkills, rawProudSkills, entry.name());
+            HexereiManager.getRoster().values().stream()
+                    .filter(other -> other.avatarId() != entry.avatarId())
+                    .forEach(other -> assertTrue(inactive.contains(other.proudSkillId()),
+                            entry.name() + " must not filter " + other.name()));
+        }
+    }
+
+    @Test
     void repeatedActivationPreservesFirstAuditRecord() {
         HexereiManager manager = new HexereiManager();
         assertEquals(
